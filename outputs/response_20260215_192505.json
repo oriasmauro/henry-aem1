@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "answer": "LangChain es una biblioteca diseñada para facilitar la creación de aplicaciones que utilizan modelos de lenguaje. Permite integrar diferentes componentes como modelos de lenguaje, herramientas, y bases de datos, facilitando la construcción de flujos de trabajo complejos y aplicaciones interactivas. Es especialmente útil para desarrollar chatbots, asistentes virtuales y aplicaciones que requieren procesamiento de lenguaje natural.",
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}
