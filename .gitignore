@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+.venv/
+__pycache__/
+.env
+metrics/*.csv
+*.pyc
