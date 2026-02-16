@@ -1,0 +1,14 @@
+{
+  "status": "refused",
+  "answer": "No puedo ayudar con el restablecimiento de contraseñas sin verificación adecuada.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Informar sobre el proceso de recuperación de contraseña",
+    "Escalar a seguridad si corresponde"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

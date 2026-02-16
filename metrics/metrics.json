@@ -1,18 +1,26 @@
 [
   {
-    "timestamp": "2026-02-15T19:21:37",
-    "tokens_prompt": 744,
-    "tokens_completion": 101,
-    "total_tokens": 845,
-    "latency_ms": 4318.92,
-    "estimated_cost_usd": 0.0
+    "timestamp": "2026-02-16T12:53:41+00:00",
+    "tokens_prompt": 664,
+    "tokens_completion": 115,
+    "total_tokens": 779,
+    "latency_ms": 3697.04,
+    "estimated_cost_usd": 0.1686
   },
   {
-    "timestamp": "2026-02-15T19:25:05",
-    "tokens_prompt": 743,
-    "tokens_completion": 103,
-    "total_tokens": 846,
-    "latency_ms": 3383.82,
-    "estimated_cost_usd": 0.17325
+    "timestamp": "2026-02-16T13:01:34+00:00",
+    "tokens_prompt": 663,
+    "tokens_completion": 92,
+    "total_tokens": 755,
+    "latency_ms": 3294.51,
+    "estimated_cost_usd": 0.15465
+  },
+  {
+    "timestamp": "2026-02-16T13:02:00+00:00",
+    "tokens_prompt": 659,
+    "tokens_completion": 76,
+    "total_tokens": 735,
+    "latency_ms": 3116.52,
+    "estimated_cost_usd": 0.14445
   }
 ]

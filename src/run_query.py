@@ -1,16 +1,75 @@
+import csv
 import json
 import os
-import csv
+import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from datetime import datetime
 
 from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 from openai import OpenAI
 
-
 PROMPTS_FILES = [Path("prompts/main_prompt.md"), Path("prompts/main_prompt.txt")]
+
+RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"enum": ["ok", "needs_clarification", "refused", "error"]},
+        "answer": {"type": "string"},
+        "confidence": {"enum": ["low", "medium", "high"]},
+        "actions": {"type": "array", "items": {"type": "string"}},
+        "follow_up_question": {"type": ["string", "null"]},
+        "sources": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["status", "answer", "confidence", "actions", "follow_up_question", "sources"],
+    "additionalProperties": False,
+}
+
+# Patrón de expresiones regulares para detectar consultas potencialmente adversariales
+ADVERSARIAL_PATTERNS = [
+    r"ignore\s+(all\s+)?(previous|prior)\s+instructions",
+    r"reveal\s+(your\s+)?(system|hidden)\s+prompt",
+    r"jailbreak",
+    r"bypass\s+(security|safety)",
+    r"hack(ear|eo|ing)?",
+    r"phishing",
+    r"malware",
+]
+
+
+def load_prompt() -> str:
+    for prompt_file in PROMPTS_FILES:
+        if prompt_file.exists():
+            return prompt_file.read_text(encoding="utf-8")
+    raise FileNotFoundError("No prompt file found in the expected locations.")
+
+
+def estimate_cost_usd(tokens_prompt: int, tokens_completion: int) -> float:
+    prompt_per_1k = float(os.getenv("OPENAI_COST_PROMPT_PER_1K_USD", "0"))
+    completion_per_1k = float(os.getenv("OPENAI_COST_COMPLETION_PER_1K_USD", "0"))
+    cost = ((tokens_prompt / 1000) * prompt_per_1k) + ((tokens_completion / 1000) * completion_per_1k)
+    return round(cost, 8)
+
+
+def is_adversarial_query(query: str) -> bool:
+    lowered = query.lower()
+    return any(re.search(pattern, lowered) for pattern in ADVERSARIAL_PATTERNS)
+
+
+def safe_refusal_response() -> dict:
+    return {
+        "status": "refused",
+        "answer": "No puedo ayudar con esa solicitud. Puedo ayudar con una respuesta segura orientada a soporte al cliente.",
+        "confidence": "high",
+        "actions": [
+            "Solicitar una pregunta relacionada con soporte legítimo",
+            "Escalar a revisión humana si se detecta abuso repetido",
+        ],
+        "follow_up_question": "¿Querés reformular tu consulta sobre un caso de soporte al cliente?",
+        "sources": ["policy_guardrail_local"],
+    }
+
 
 def save_output(data: dict) -> Path:
     out_dir = Path("outputs")
@@ -20,19 +79,6 @@ def save_output(data: dict) -> Path:
     out_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return out_path
 
-def load_prompts():
-    for prompt_file in PROMPTS_FILES:
-        if prompt_file.exists():
-            return prompt_file.read_text(encoding="utf-8")
-    raise FileNotFoundError("No prompt file found in the expected locations.")
-
-
-def estimate_cost_usd(tokens_prompt: int, tokens_completion: int) -> float:
-    # Configurable via .env to avoid hardcoding model prices.
-    prompt_per_1k = float(os.getenv("OPENAI_COST_PROMPT_PER_1K_USD", "0"))
-    completion_per_1k = float(os.getenv("OPENAI_COST_COMPLETION_PER_1K_USD", "0"))
-    return round(((tokens_prompt / 1000) * prompt_per_1k) + ((tokens_completion / 1000) * completion_per_1k), 8)
-
 
 def save_metrics_csv(metrics: dict) -> Path:
     metrics_dir = Path("metrics")
@@ -40,9 +86,9 @@ def save_metrics_csv(metrics: dict) -> Path:
     csv_path = metrics_dir / "metrics.csv"
     file_exists = csv_path.exists()
 
-    with csv_path.open("a", encoding="utf-8", newline="") as f:
+    with csv_path.open("a", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(
-            f,
+            file,
             fieldnames=[
                 "timestamp",
                 "tokens_prompt",
@@ -55,6 +101,7 @@ def save_metrics_csv(metrics: dict) -> Path:
         if not file_exists:
             writer.writeheader()
         writer.writerow(metrics)
+
     return csv_path
 
 
@@ -64,39 +111,42 @@ def save_metrics_json(metrics: dict) -> Path:
     json_path = metrics_dir / "metrics.json"
 
     if json_path.exists():
-        current = json.loads(json_path.read_text(encoding="utf-8"))
-        if not isinstance(current, list):
-            current = []
+        existing = json.loads(json_path.read_text(encoding="utf-8"))
+        if not isinstance(existing, list):
+            existing = []
     else:
-        current = []
+        existing = []
 
-    current.append(metrics)
-    json_path.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+    existing.append(metrics)
+    json_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
     return json_path
 
 
-RESPONSE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "status": {"enum": ["ok", "needs_clarification", "refused", "error"]},
-        "answer": {"type": "string"},
-        "follow_up_question": {"type": ["string", "null"]},
-        "sources": {
-            "type": "array",
-            "items": {"type": "string"}
-        },
-    },
-    "required": ["status", "answer", "follow_up_question", "sources"],
-    "additionalProperties": False,
-}
+def build_metrics(*, prompt_tokens: int, completion_tokens: int, latency_ms: float) -> dict:
+    total_tokens = prompt_tokens + completion_tokens
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "tokens_prompt": prompt_tokens,
+        "tokens_completion": completion_tokens,
+        "total_tokens": total_tokens,
+        "latency_ms": round(latency_ms, 2),
+        "estimated_cost_usd": estimate_cost_usd(prompt_tokens, completion_tokens),
+    }
 
 
 def run_query(query: str) -> tuple[dict, dict]:
     load_dotenv()
+
+    if is_adversarial_query(query):
+        response_data = safe_refusal_response()
+        validate(instance=response_data, schema=RESPONSE_SCHEMA)
+        metrics = build_metrics(prompt_tokens=0, completion_tokens=0, latency_ms=0.0)
+        return response_data, metrics
+
     client = OpenAI()
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    system_prompt = load_prompt()
 
-    system_prompt = load_prompts()
     started = time.perf_counter()
     response = client.chat.completions.create(
         model=model,
@@ -107,46 +157,53 @@ def run_query(query: str) -> tuple[dict, dict]:
         response_format={
             "type": "json_schema",
             "json_schema": {
-                "name": "assistant_response",
+                "name": "support_assistant_response",
                 "strict": True,
                 "schema": RESPONSE_SCHEMA,
             },
         },
         temperature=0.2,
-        max_tokens=1000,
+        max_tokens=600,
     )
-    latency_ms = round((time.perf_counter() - started) * 1000, 2)
+    latency_ms = (time.perf_counter() - started) * 1000
 
-    content = response.choices[0].message.content or ""
-    data = json.loads(content)
-    validate(instance=data, schema=RESPONSE_SCHEMA)
+    content = response.choices[0].message.content or "{}"
+    response_data = json.loads(content)
+    validate(instance=response_data, schema=RESPONSE_SCHEMA)
 
     usage = response.usage
-    tokens_prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
-    tokens_completion = int(getattr(usage, "completion_tokens", 0) or 0)
-    total_tokens = int(getattr(usage, "total_tokens", tokens_prompt + tokens_completion) or (tokens_prompt + tokens_completion))
-    metrics = {
-        "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "tokens_prompt": tokens_prompt,
-        "tokens_completion": tokens_completion,
-        "total_tokens": total_tokens,
-        "latency_ms": latency_ms,
-        "estimated_cost_usd": estimate_cost_usd(tokens_prompt, tokens_completion),
-    }
-    return data, metrics
+    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+    completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+    metrics = build_metrics(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        latency_ms=latency_ms,
+    )
+    return response_data, metrics
 
-if __name__ == "__main__":
-    query = input("Ingresa tu pregunta: ")
+
+def main() -> None:
+    query = input("Ingresa la pregunta del cliente: ").strip()
+    if not query:
+        print("La pregunta no puede estar vacía.")
+        return
+
     try:
-        response, metrics = run_query(query)
-        print("Response:")
-        print(json.dumps(response, ensure_ascii=False, indent=2))
-        saved_path = save_output(response)
-        print(f"Guardado en: {saved_path}")
+        response_data, metrics = run_query(query)
+        print("Respuesta JSON:")
+        print(json.dumps(response_data, ensure_ascii=False, indent=2))
+
+        output_path = save_output(response_data)
         metrics_csv_path = save_metrics_csv(metrics)
         metrics_json_path = save_metrics_json(metrics)
+
+        print(f"Salida guardada en: {output_path}")
         print(f"Métricas guardadas en: {metrics_csv_path} y {metrics_json_path}")
-    except json.JSONDecodeError as e:
-        print(f"La respuesta no fue JSON válido: {e}")
-    except ValidationError as e:
-        print(f"La respuesta no cumple el esquema: {e.message}")
+    except json.JSONDecodeError as exc:
+        print(f"La respuesta del modelo no fue JSON válido: {exc}")
+    except ValidationError as exc:
+        print(f"La respuesta no cumple el esquema esperado: {exc.message}")
+
+
+if __name__ == "__main__":
+    main()

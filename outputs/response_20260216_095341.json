@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "answer": "El error 503 indica que el servicio está temporalmente no disponible. Recomienda al cliente intentar de nuevo más tarde y verificar el estado del servidor.",
+  "confidence": "high",
+  "actions": [
+    "Informar al cliente sobre el error 503 y su significado",
+    "Sugerir intentar el login más tarde",
+    "Verificar si hay reportes de caídas del servicio"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

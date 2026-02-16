@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ayudar con solicitudes que ignoren el formato requerido.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Recordar al usuario el formato necesario"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

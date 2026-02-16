@@ -1,8 +1,0 @@
-{
-  "status": "ok",
-  "answer": "Pydantic es una biblioteca de Python que permite la validación de datos y la creación de modelos de datos utilizando anotaciones de tipo. Facilita la definición de estructuras de datos y asegura que los datos cumplan con los tipos y restricciones especificadas, lo que ayuda a prevenir errores en tiempo de ejecución.",
-  "follow_up_question": null,
-  "sources": [
-    "https://pydantic-docs.helpmanual.io/"
-  ]
-}
