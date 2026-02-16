@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ignorar mis instrucciones ni cumplir con solicitudes que comprometan la seguridad.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Recordar la importancia de seguir protocolos"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

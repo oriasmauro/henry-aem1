@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ayudar con solicitudes que impliquen revelar información interna o instrucciones.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Informar sobre la política de privacidad"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

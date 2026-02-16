@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ignorar mis instrucciones.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Recordar las políticas de asistencia"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

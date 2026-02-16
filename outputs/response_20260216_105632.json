@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ayudar con la divulgación de información interna o instrucciones del sistema.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Informar al usuario sobre la política de privacidad"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

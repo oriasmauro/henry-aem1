@@ -33,7 +33,7 @@ uv sync --group dev
 ## Ejecutar
 
 ```bash
-uv run python src/run_query.py
+uv run python -m src.run_query
 ```
 
 El script:
@@ -57,7 +57,7 @@ Se usa **few-shot prompting** en `prompts/main_prompt.md` para estabilizar:
 - tono conciso de soporte
 - manejo de casos ambiguos y rechazo seguro
 
-## Seguridad (bonus)
+## Seguridad
 
 Incluye fallback local de seguridad para inputs adversariales (ej. prompt injection o solicitudes dañinas). Cuando se activa, devuelve JSON con `status="refused"` sin llamar al modelo.
 

@@ -1,7 +1,6 @@
 import csv
 import json
 import os
-import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from jsonschema import ValidationError, validate
 from openai import OpenAI
+from src.safety import evaluate_query_safety
 
 PROMPTS_FILES = [Path("prompts/main_prompt.md"), Path("prompts/main_prompt.txt")]
 
@@ -26,18 +26,6 @@ RESPONSE_SCHEMA = {
     "additionalProperties": False,
 }
 
-# Patrón de expresiones regulares para detectar consultas potencialmente adversariales
-ADVERSARIAL_PATTERNS = [
-    r"ignore\s+(all\s+)?(previous|prior)\s+instructions",
-    r"reveal\s+(your\s+)?(system|hidden)\s+prompt",
-    r"jailbreak",
-    r"bypass\s+(security|safety)",
-    r"hack(ear|eo|ing)?",
-    r"phishing",
-    r"malware",
-]
-
-
 def load_prompt() -> str:
     for prompt_file in PROMPTS_FILES:
         if prompt_file.exists():
@@ -50,25 +38,6 @@ def estimate_cost_usd(tokens_prompt: int, tokens_completion: int) -> float:
     completion_per_1k = float(os.getenv("OPENAI_COST_COMPLETION_PER_1K_USD", "0"))
     cost = ((tokens_prompt / 1000) * prompt_per_1k) + ((tokens_completion / 1000) * completion_per_1k)
     return round(cost, 8)
-
-
-def is_adversarial_query(query: str) -> bool:
-    lowered = query.lower()
-    return any(re.search(pattern, lowered) for pattern in ADVERSARIAL_PATTERNS)
-
-
-def safe_refusal_response() -> dict:
-    return {
-        "status": "refused",
-        "answer": "No puedo ayudar con esa solicitud. Puedo ayudar con una respuesta segura orientada a soporte al cliente.",
-        "confidence": "high",
-        "actions": [
-            "Solicitar una pregunta relacionada con soporte legítimo",
-            "Escalar a revisión humana si se detecta abuso repetido",
-        ],
-        "follow_up_question": "¿Querés reformular tu consulta sobre un caso de soporte al cliente?",
-        "sources": ["policy_guardrail_local"],
-    }
 
 
 def save_output(data: dict) -> Path:
@@ -137,8 +106,14 @@ def build_metrics(*, prompt_tokens: int, completion_tokens: int, latency_ms: flo
 def run_query(query: str) -> tuple[dict, dict]:
     load_dotenv()
 
-    if is_adversarial_query(query):
-        response_data = safe_refusal_response()
+    result = evaluate_query_safety(query) # Evalúa la seguridad de la consulta y obtiene el resultado
+    blocked = result[0]
+    fallback_response = result[1]
+    matched_patterns = result[2]
+    print(f"[SAFETY] blocked={blocked} matched_patterns={matched_patterns}")
+
+    if blocked:
+        response_data = fallback_response or {}
         validate(instance=response_data, schema=RESPONSE_SCHEMA)
         metrics = build_metrics(prompt_tokens=0, completion_tokens=0, latency_ms=0.0)
         return response_data, metrics

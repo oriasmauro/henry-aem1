@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ayudar con el restablecimiento o divulgación de contraseñas de usuarios.",
+  "confidence": "high",
+  "actions": [
+    "Rechazar la solicitud",
+    "Informar al usuario sobre el proceso de recuperación de contraseña"
+  ],
+  "follow_up_question": null,
+  "sources": [
+    "conocimiento general"
+  ]
+}

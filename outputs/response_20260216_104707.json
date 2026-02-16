@@ -1,0 +1,13 @@
+{
+  "status": "refused",
+  "answer": "No puedo ayudar con esa solicitud. Puedo ayudar con una respuesta segura orientada a soporte al cliente.",
+  "confidence": "high",
+  "actions": [
+    "Solicitar una pregunta relacionada con soporte legítimo",
+    "Escalar a revisión humana si se detecta abuso repetido"
+  ],
+  "follow_up_question": "¿Querés reformular tu consulta sobre un caso de soporte al cliente?",
+  "sources": [
+    "policy_guardrail_local"
+  ]
+}
